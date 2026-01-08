@@ -11,7 +11,7 @@ pub struct PluginRenderer;
 
 impl PluginRenderer {
     /// Render the main plugin interface
-    pub fn render(state: &PluginState, rows: usize, cols: usize) {
+    pub fn render(state: &mut PluginState, rows: usize, cols: usize) {
         let (x, y, width, height) = Self::calculate_main_size(rows, cols);
 
         match state.active_screen() {
@@ -19,7 +19,7 @@ impl PluginRenderer {
                 Self::render_main_screen(state, x, y, width, height);
             }
             ActiveScreen::NewSession => {
-                Self::render_new_session_screen(state, x, y, width, height);
+                Self::render_new_session_screen(&*state, x, y, width, height);
             }
         }
 
@@ -32,7 +32,13 @@ impl PluginRenderer {
     }
 
     /// Render the main screen with directory/session list
-    fn render_main_screen(state: &PluginState, x: usize, y: usize, width: usize, height: usize) {
+    fn render_main_screen(
+        state: &mut PluginState,
+        x: usize,
+        y: usize,
+        width: usize,
+        height: usize,
+    ) {
         let theme = state.colors().map(Theme::new);
 
         // Render title
@@ -56,7 +62,7 @@ impl PluginRenderer {
         // Render main content
         let table_rows = height.saturating_sub(6);
         let table = if state.search_engine().is_searching() {
-            Self::render_search_results(state, table_rows, width, &theme)
+            Self::render_search_results(&*state, table_rows, width, &theme)
         } else {
             Self::render_all_items(state, table_rows, width, &theme)
         };
@@ -136,7 +142,7 @@ impl PluginRenderer {
 
     /// Render all items table
     fn render_all_items(
-        state: &PluginState,
+        state: &mut PluginState,
         table_rows: usize,
         table_width: usize,
         theme: &Option<Theme>,
