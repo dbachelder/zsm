@@ -28,6 +28,8 @@ pub struct PluginState {
     colors: Option<Palette>,
     /// Current session name
     current_session_name: Option<String>,
+    /// Previous session name (for quick-switch)
+    previous_session_name: Option<String>,
     /// Request IDs for plugin communication
     request_ids: Vec<String>,
     /// Selected index in main list (when not searching)
@@ -53,10 +55,20 @@ impl PluginState {
     /// Update session information with stability tracking
     /// Returns true if the session list actually changed
     pub fn update_sessions(&mut self, sessions: Vec<SessionInfo>) -> bool {
-        // Store current session name and layouts from the incoming data
+        // Find the new current session from incoming data
         for session in &sessions {
             if session.is_current_session {
-                self.current_session_name = Some(session.name.clone());
+                let new_current = Some(session.name.clone());
+
+                // Track session change for quick-switch
+                if self.current_session_name != new_current {
+                    // Request async read of previous session
+                    self.request_previous_session_read();
+                    // Reset selection so it will be initialized to previous session
+                    self.selected_index = None;
+                }
+
+                self.current_session_name = new_current;
                 self.new_session_info
                     .update_layout_list(session.available_layouts.clone());
                 break;
@@ -228,12 +240,29 @@ impl PluginState {
     }
 
     /// Get selected index for main screen
-    pub fn selected_index(&self) -> Option<usize> {
+    /// Lazily initializes to previous session for quick-switch if no selection yet
+    pub fn selected_index(&mut self) -> Option<usize> {
         if self.search_engine.is_searching() {
             self.search_engine.selected_index()
         } else {
+            // Initialize selection to previous session if not set
+            if self.selected_index.is_none() {
+                self.selected_index = self.find_previous_session_index();
+            }
             self.selected_index
         }
+    }
+
+    /// Find the index of the previous session in the display list
+    fn find_previous_session_index(&self) -> Option<usize> {
+        let previous = self.previous_session_name.as_ref()?;
+        let items = self.display_items();
+
+        items.iter().position(|item| match item {
+            SessionItem::ExistingSession { name, .. } => name == previous,
+            SessionItem::ResurrectableSession { name, .. } => name == previous,
+            _ => false,
+        })
     }
 
     /// Get colors
@@ -453,6 +482,10 @@ impl PluginState {
 
         if let Some((is_session, name, path)) = selected_item_data {
             if is_session {
+                // Write current session as "previous" before switching
+                if let Some(ref current) = self.current_session_name {
+                    Self::write_previous_session(current);
+                }
                 // Switch to existing session
                 self.session_manager
                     .execute_action(SessionAction::Switch(name));
@@ -594,6 +627,11 @@ impl PluginState {
             return;
         }
 
+        // Write current session as "previous" before switching
+        if let Some(ref current) = self.current_session_name {
+            Self::write_previous_session(current);
+        }
+
         // Create session with default layout if configured
         match &self.config.default_layout {
             Some(layout_name) => {
@@ -631,5 +669,41 @@ impl PluginState {
         }
 
         hide_self();
+    }
+
+    /// Write the current session as the previous session via shell command
+    fn write_previous_session(session_name: &str) {
+        use zellij_tile::prelude::run_command;
+        let mut context = BTreeMap::new();
+        context.insert("zsm_internal".to_string(), "write".to_string());
+        run_command(
+            &[
+                "sh",
+                "-c",
+                &format!("echo '{}' > /tmp/zsm-previous-session", session_name),
+            ],
+            context,
+        );
+    }
+
+    /// Request async read of previous session
+    pub fn request_previous_session_read(&self) {
+        use zellij_tile::prelude::run_command;
+        let mut context = BTreeMap::new();
+        context.insert("zsm_read_previous".to_string(), "true".to_string());
+        run_command(
+            &[
+                "sh",
+                "-c",
+                "cat /tmp/zsm-previous-session 2>/dev/null || echo ''",
+            ],
+            context,
+        );
+    }
+
+    /// Set previous session (called from async result)
+    pub fn set_previous_session(&mut self, name: Option<String>) {
+        self.previous_session_name = name;
+        self.selected_index = None;
     }
 }

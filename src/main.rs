@@ -84,6 +84,13 @@ impl ZellijPlugin for PluginState {
                         ));
                         should_render = true;
                     }
+                } else if context.contains_key("zsm_read_previous") {
+                    let stdout_str = String::from_utf8_lossy(&stdout);
+                    let previous = stdout_str.trim().to_string();
+                    if !previous.is_empty() {
+                        self.set_previous_session(Some(previous));
+                    }
+                    should_render = true;
                 }
             }
             _ => (),
