@@ -98,7 +98,43 @@ Note: `SessionInfo` from `zellij-tile` has many required fields. See `manager.rs
 ## CI
 
 GitHub Actions workflow (`.github/workflows/ci.yml`) runs on PRs and pushes to main:
-- `test` - Runs unit tests on native target
+- `test` - Runs unit tests on native target (must explicitly specify `--target x86_64-unknown-linux-gnu` because `.cargo/config.toml` defaults to wasm32-wasip1)
 - `build-wasm` - Verifies WASM compilation
 - `clippy` - Lints with `-D warnings`
 - `fmt` - Checks formatting
+
+## WASM Sandbox Limitations
+
+Zellij plugins run in a WASI sandbox with restricted filesystem access:
+
+- **Cannot directly write to real filesystem** - `std::fs::write()` writes to a sandboxed virtual filesystem
+- **Mapped paths** (per [Zellij docs](https://zellij.dev/documentation/plugin-api-file-system.html)):
+  - `/host` - Working directory of last focused terminal
+  - `/data` - Plugin-specific folder (but NOT shared across sessions despite docs)
+  - `/tmp` - Sandboxed temp directory (NOT the real /tmp)
+
+**To persist data across sessions**, use `run_command` to shell out:
+```rust
+run_command(&["sh", "-c", "echo 'data' > /tmp/myfile"], context);
+```
+
+## Plugin Instance Behavior
+
+**Each Zellij session has its own plugin instance** with separate state:
+- Switching from session A to B means interacting with B's plugin instance
+- State does not transfer between sessions automatically
+- To share state, must use external storage (files via `run_command`)
+
+**Plugin reloading**:
+- `zellij action start-or-reload-plugin "file:/path/to/plugin.wasm"` - Reloads in current session only
+- Must reload separately in each session, or close/reopen the plugin pane
+- Closing the pane (not just hiding) and reopening loads the new binary
+
+## Quick-Switch Feature
+
+The plugin supports quick-switching to the previous session:
+- When switching sessions, writes current session name to `/tmp/zsm-previous-session` via `run_command`
+- When plugin opens, reads that file and pre-selects the previous session
+- Press Enter to instantly toggle back
+
+Implementation in `state.rs`: `write_previous_session()` and `request_previous_session_read()` use async `run_command` because direct filesystem access is sandboxed.
