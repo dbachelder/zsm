@@ -149,9 +149,22 @@ impl SessionManager {
         self.pending_deletion = Some(session_name);
     }
 
+    /// Remove a session from local state immediately (bypasses stability tracking)
+    /// Used when user explicitly deletes a session
+    fn remove_session_from_local_state(&mut self, session_name: &str) {
+        let key = session_name.to_lowercase();
+        self.sessions.retain(|s| s.name.to_lowercase() != key);
+        self.resurrectable_sessions
+            .retain(|(name, _)| name.to_lowercase() != key);
+        self.missing_counts.remove(&key);
+    }
+
     /// Confirm session deletion
+    /// Immediately removes the session from local lists (bypasses stability tracking)
     pub fn confirm_deletion(&mut self) {
         if let Some(session_name) = self.pending_deletion.take() {
+            // Immediately remove from local lists - user explicitly requested deletion
+            self.remove_session_from_local_state(&session_name);
             self.execute_action(SessionAction::Kill(session_name));
         }
     }
@@ -333,5 +346,62 @@ mod tests {
         let changed = manager
             .update_resurrectable_stable(vec![("session".to_string(), Duration::from_secs(60))]);
         assert!(!changed);
+    }
+
+    #[test]
+    fn test_remove_session_from_local_state() {
+        let mut manager = SessionManager::default();
+
+        // Add sessions
+        manager.update_sessions_stable(vec![
+            make_session("keep", false),
+            make_session("delete-me", false),
+        ]);
+        assert_eq!(manager.sessions().len(), 2);
+
+        // Remove session from local state (called by confirm_deletion)
+        manager.remove_session_from_local_state("delete-me");
+
+        // Session should be removed immediately (no waiting for stability threshold)
+        assert_eq!(manager.sessions().len(), 1);
+        assert_eq!(manager.sessions()[0].name, "keep");
+    }
+
+    #[test]
+    fn test_remove_resurrectable_from_local_state() {
+        let mut manager = SessionManager::default();
+
+        // Add resurrectable sessions
+        manager.update_resurrectable_stable(vec![
+            ("keep".to_string(), Duration::from_secs(60)),
+            ("delete-me".to_string(), Duration::from_secs(60)),
+        ]);
+        assert_eq!(manager.resurrectable_sessions().len(), 2);
+
+        // Remove session from local state (called by confirm_deletion)
+        manager.remove_session_from_local_state("delete-me");
+
+        // Session should be removed immediately
+        assert_eq!(manager.resurrectable_sessions().len(), 1);
+        assert_eq!(manager.resurrectable_sessions()[0].0, "keep");
+    }
+
+    #[test]
+    fn test_remove_session_clears_missing_count() {
+        let mut manager = SessionManager::default();
+
+        // Add session then let it go "missing" to build up a count
+        manager.update_sessions_stable(vec![make_session("test", false)]);
+        manager.update_sessions_stable(vec![]); // Missing once
+        manager.update_sessions_stable(vec![]); // Missing twice
+
+        // Verify missing count exists
+        assert!(manager.missing_counts.contains_key("test"));
+
+        // Remove session explicitly
+        manager.remove_session_from_local_state("test");
+
+        // Missing count should be cleared
+        assert!(!manager.missing_counts.contains_key("test"));
     }
 }
