@@ -317,40 +317,71 @@ impl PluginRenderer {
         _colors: Option<Palette>,
     ) {
         let dialog_width = std::cmp::min(60, width.saturating_sub(4));
-        let dialog_height = 6;
-        let dialog_x = x + (width.saturating_sub(dialog_width)) / 2;
-        let dialog_y = y + (height.saturating_sub(dialog_height)) / 2;
+        let content_width = dialog_width.saturating_sub(4); // Space for borders + padding
 
         let message = format!("Kill session '{}'?", session_name);
         let warning =
             "If this is a resurrectable session, it will be deleted. This action cannot be undone.";
         let prompt = "Press 'y' to confirm, 'n' or Esc to cancel";
 
-        let dialog_lines = [
-            "┌".to_string() + &"─".repeat(dialog_width.saturating_sub(2)) + "┐",
-            format!(
-                "│{:^width$}│",
-                message,
-                width = dialog_width.saturating_sub(2)
-            ),
-            format!(
-                "│{:^width$}│",
-                warning,
-                width = dialog_width.saturating_sub(2)
-            ),
-            format!("│{:^width$}│", "", width = dialog_width.saturating_sub(2)),
-            format!(
-                "│{:^width$}│",
-                prompt,
-                width = dialog_width.saturating_sub(2)
-            ),
-            "└".to_string() + &"─".repeat(dialog_width.saturating_sub(2)) + "┘",
+        // Wrap warning text to fit dialog
+        let wrapped_warning = Self::wrap_text(warning, content_width);
+
+        // Dynamic height: top border + message + warning lines + blank + prompt + bottom border
+        let dialog_height = 4 + wrapped_warning.len();
+        let dialog_x = x + (width.saturating_sub(dialog_width)) / 2;
+        let dialog_y = y + (height.saturating_sub(dialog_height)) / 2;
+
+        let inner_width = dialog_width.saturating_sub(2);
+
+        // Build dialog lines
+        let mut dialog_lines = vec![
+            "┌".to_string() + &"─".repeat(inner_width) + "┐",
+            format!("│{:^width$}│", message, width = inner_width),
         ];
+
+        // Add wrapped warning lines
+        for line in &wrapped_warning {
+            dialog_lines.push(format!("│{:^width$}│", line, width = inner_width));
+        }
+
+        // Add blank line and prompt
+        dialog_lines.push(format!("│{:^width$}│", "", width = inner_width));
+        dialog_lines.push(format!("│{:^width$}│", prompt, width = inner_width));
+        dialog_lines.push("└".to_string() + &"─".repeat(inner_width) + "┘");
 
         for (i, line) in dialog_lines.iter().enumerate() {
             let text = Text::new(line).color_range(1, ..);
             print_text_with_coordinates(text, dialog_x, dialog_y + i, None, None);
         }
+    }
+
+    /// Wrap text to fit within max_width, breaking at word boundaries
+    fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
+        if text.len() <= max_width {
+            return vec![text.to_string()];
+        }
+
+        let mut lines = Vec::new();
+        let mut current_line = String::new();
+
+        for word in text.split_whitespace() {
+            if current_line.is_empty() {
+                current_line = word.to_string();
+            } else if current_line.len() + 1 + word.len() <= max_width {
+                current_line.push(' ');
+                current_line.push_str(word);
+            } else {
+                lines.push(current_line);
+                current_line = word.to_string();
+            }
+        }
+
+        if !current_line.is_empty() {
+            lines.push(current_line);
+        }
+
+        lines
     }
 
     /// Calculate main UI size
