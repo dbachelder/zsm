@@ -50,6 +50,10 @@ impl ZellijPlugin for PluginState {
             Event::PermissionRequestResult(permission_status) => {
                 match permission_status {
                     PermissionStatus::Granted => {
+                        // Set pane title instead of showing the plugin path
+                        let plugin_ids = get_plugin_ids();
+                        rename_plugin_pane(plugin_ids.plugin_id, "ZSM - Zoxide Session Manager".to_string());
+
                         // Now that we have permissions, fetch zoxide directories
                         self.fetch_zoxide_directories();
                         should_render = true;

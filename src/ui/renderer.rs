@@ -41,14 +41,6 @@ impl PluginRenderer {
     ) {
         let theme = state.colors().map(Theme::new);
 
-        // Render title
-        let title = if let Some(theme) = &theme {
-            theme.title("Zoxide Session Manager")
-        } else {
-            Text::new("Zoxide Session Manager").color_range(2, ..)
-        };
-        print_text_with_coordinates(title, x, y, None, None);
-
         // Render search indication
         let search_term = state.search_engine().search_term();
         let search_text = format!("Search: {}_", search_term);
@@ -57,10 +49,10 @@ impl PluginRenderer {
         } else {
             Text::new(&search_text).color_range(1, ..7)
         };
-        print_text_with_coordinates(search_indication, x, y + 2, None, None);
+        print_text_with_coordinates(search_indication, x, y, None, None);
 
         // Render main content
-        let table_rows = height.saturating_sub(6);
+        let table_rows = height.saturating_sub(4);
         let table = if state.search_engine().is_searching() {
             Self::render_search_results(&*state, table_rows, width, &theme)
         } else {
@@ -74,9 +66,9 @@ impl PluginRenderer {
                 Text::new("No zoxide directories found. Make sure zoxide is installed and you have visited some directories.")
                     .color_range(1, ..)
             };
-            print_text_with_coordinates(no_dirs_text, x, y + 4, None, None);
+            print_text_with_coordinates(no_dirs_text, x, y + 2, None, None);
         } else {
-            print_table_with_coordinates(table, x, y + 4, Some(width), Some(table_rows));
+            print_table_with_coordinates(table, x, y + 2, Some(width), Some(table_rows));
         }
 
         // Render help text

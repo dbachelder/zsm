@@ -22,6 +22,7 @@ impl Theme {
     }
 
     /// Text for titles (color index 3 = blue/cyan)
+    #[allow(dead_code)]
     pub fn title(&self, text: &str) -> Text {
         Text::new(text).color_range(3, ..)
     }
