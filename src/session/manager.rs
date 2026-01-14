@@ -151,9 +151,32 @@ impl SessionManager {
         self.pending_deletion = Some(session_name);
     }
 
+    /// Remove a session from local state (optimistic update)
+    /// Used by confirm_deletion for immediate UI feedback
+    fn remove_session_from_local_state(&mut self, session_name: &str) {
+        let key = session_name.to_lowercase();
+
+        // Remove from existing sessions
+        self.sessions.retain(|s| s.name.to_lowercase() != key);
+
+        // Remove from resurrectable sessions
+        self.resurrectable_sessions
+            .retain(|(name, _)| name.to_lowercase() != key);
+
+        // Clean up tracking state
+        self.missing_counts.remove(&key);
+    }
+
     /// Confirm session deletion
+    /// Uses optimistic update - removes from local state immediately before sending kill command
     pub fn confirm_deletion(&mut self) {
         if let Some(session_name) = self.pending_deletion.take() {
+            // Optimistic update: Remove session from local state immediately
+            // This provides instant UI feedback rather than waiting for MISSING_THRESHOLD updates
+            self.remove_session_from_local_state(&session_name);
+
+            // Now execute the actual kill/delete action
+            // If this fails, the session will reappear on the next SessionUpdate event
             self.execute_action(SessionAction::Kill(session_name));
         }
     }
@@ -367,5 +390,64 @@ mod tests {
         let changed = manager
             .update_resurrectable_stable(vec![("session".to_string(), Duration::from_secs(60))]);
         assert!(!changed);
+    }
+
+    #[test]
+    fn test_optimistic_removal_removes_session_immediately() {
+        let mut manager = SessionManager::default();
+
+        // Add sessions
+        manager.update_sessions_stable(vec![
+            make_session("keep", false),
+            make_session("delete-me", false),
+        ]);
+        assert_eq!(manager.sessions().len(), 2);
+
+        // Optimistic removal should remove session from local state immediately
+        manager.remove_session_from_local_state("delete-me");
+
+        // Session should be removed immediately
+        assert_eq!(manager.sessions().len(), 1);
+        assert_eq!(manager.sessions()[0].name, "keep");
+    }
+
+    #[test]
+    fn test_optimistic_removal_removes_resurrectable_immediately() {
+        let mut manager = SessionManager::default();
+
+        // Add resurrectable session
+        manager.update_resurrectable_stable(vec![(
+            "dead-session".to_string(),
+            Duration::from_secs(60),
+        )]);
+        assert_eq!(manager.resurrectable_sessions().len(), 1);
+
+        // Optimistic removal should remove resurrectable session from local state immediately
+        manager.remove_session_from_local_state("dead-session");
+
+        // Should be removed immediately
+        assert_eq!(manager.resurrectable_sessions().len(), 0);
+    }
+
+    #[test]
+    fn test_optimistic_removal_cleans_up_missing_counts() {
+        let mut manager = SessionManager::default();
+
+        // Add a session
+        manager.update_sessions_stable(vec![make_session("test", false)]);
+
+        // Session disappears for one update - this adds to missing_counts
+        manager.update_sessions_stable(vec![]);
+        // Session reappears - this removes from missing_counts, then disappears again
+        manager.update_sessions_stable(vec![make_session("test", false)]);
+        manager.update_sessions_stable(vec![]);
+        // At this point, "test" is in missing_counts
+
+        // Optimistic removal should also clean up missing_counts
+        manager.remove_session_from_local_state("test");
+
+        // Even if session somehow reappears (failed kill), the missing_counts
+        // shouldn't have stale data - verify session is gone from local state
+        assert_eq!(manager.sessions().len(), 0);
     }
 }

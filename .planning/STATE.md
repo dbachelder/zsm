@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-13)
 
 **Core value:** The session selector should feel instant and intuitive — MRU ordering, clean visual hierarchy, and responsive feedback.
-**Current focus:** Phase 3 — Tabular Alignment (complete)
+**Current focus:** Phase 5 — Responsive Deletion (complete)
 
 ## Current Position
 
-Phase: 3 of 6 (Tabular Alignment)
+Phase: 5 of 7 (Responsive Deletion)
 Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-01-13 — Completed 03-01-PLAN.md
+Last activity: 2026-01-13 — Completed 05-01-PLAN.md
 
-Progress: █████░░░░░ 57%
+Progress: ███████░░░ 71%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 6
 - Average duration: 8 min
-- Total execution time: 32 min
+- Total execution time: 45 min
 
 **By Phase:**
 
@@ -30,9 +30,11 @@ Progress: █████░░░░░ 57%
 | 01 | 1 | — | — |
 | 02 | 2 | 16 min | 8 min |
 | 03 | 1 | 8 min | 8 min |
+| 04 | 1 | 5 min | 5 min |
+| 05 | 1 | 8 min | 8 min |
 
 **Recent Trend:**
-- Last 3 plans: 02-01 (4 min), 02-02 (12 min), 03-01 (8 min)
+- Last 3 plans: 03-01 (8 min), 04-01 (5 min), 05-01 (8 min)
 - Trend: Stable
 
 ## Accumulated Context
@@ -52,10 +54,16 @@ Recent decisions affecting current work:
 | 02-02 | Append-based MRU persistence | Later lines override earlier - simple, natural MRU semantics |
 | 03-01 | Cap name column at 35 chars | Ensures directory paths have adequate display space |
 | 03-01 | 2-char gap between columns | Visual separation without wasting space |
+| 04-01 | Use rename_plugin_pane() for pane title | Zellij API for setting pane frame title, not in-UI title |
+| 05-01 | Extract remove_session_from_local_state() | Enables unit testing without FFI calls |
 
 ### Deferred Issues
 
 None yet.
+
+### Roadmap Evolution
+
+- Phase 7 added: Fix session naming bug
 
 ### Blockers/Concerns
 
@@ -64,5 +72,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-13
-Stopped at: Completed 03-01-PLAN.md (columnar layout for session list)
+Stopped at: Completed 05-01-PLAN.md (optimistic session deletion)
 Resume file: None

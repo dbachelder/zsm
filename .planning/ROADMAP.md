@@ -17,9 +17,10 @@ None
 - [x] **Phase 1: Color Palette** - Replace harsh pink/magenta with muted colors for live sessions
 - [x] **Phase 2: MRU Ordering** - Sessions ordered by most recent switch with config option
 - [x] **Phase 3: Tabular Alignment** - Session names and directories in clean columns
-- [ ] **Phase 4: Title Update** - Change title to "ZSM - Zellij Session Manager"
-- [ ] **Phase 5: Responsive Deletion** - Immediate UI feedback when killing sessions
+- [x] **Phase 4: Title Update** - Change title to "ZSM - Zellij Session Manager"
+- [x] **Phase 5: Responsive Deletion** - Immediate UI feedback when killing sessions
 - [ ] **Phase 6: Help Text Layout** - Two-row help text with logical grouping
+- [ ] **Phase 7: Fix Session Naming Bug** - Fix session naming bug
 
 ## Phase Details
 
@@ -58,7 +59,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 04-01: Update title string in renderer
+- [x] 04-01: Update title string in renderer
 
 ### Phase 5: Responsive Deletion
 **Goal**: Provide immediate visual feedback when deleting sessions to reduce perceived lag
@@ -67,7 +68,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 05-01: Add optimistic UI update on delete action
+- [x] 05-01: Add optimistic UI update on delete action
 
 ### Phase 6: Help Text Layout
 **Goal**: Reorganize help text into two rows with navigation keys on row 1, action keys on row 2
@@ -78,16 +79,26 @@ Plans:
 Plans:
 - [ ] 06-01: Restructure help text rendering
 
+### Phase 7: Fix Session Naming Bug
+**Goal**: Fix session naming bug
+**Depends on**: Phase 6
+**Research**: TBD
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 7 to break down)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Color Palette | 1/1 | Complete | 2026-01-14 |
 | 2. MRU Ordering | 2/2 | Complete | 2026-01-13 |
 | 3. Tabular Alignment | 1/1 | Complete | 2026-01-13 |
-| 4. Title Update | 0/1 | Not started | - |
-| 5. Responsive Deletion | 0/1 | Not started | - |
+| 4. Title Update | 1/1 | Complete | 2026-01-13 |
+| 5. Responsive Deletion | 1/1 | Complete | 2026-01-13 |
 | 6. Help Text Layout | 0/1 | Not started | - |
+| 7. Fix Session Naming Bug | 0/? | Not started | - |
