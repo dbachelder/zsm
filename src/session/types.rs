@@ -40,6 +40,4 @@ impl SessionItem {
 pub enum SessionAction {
     /// Switch to an existing session
     Switch(String),
-    /// Kill an existing session
-    Kill(String),
 }

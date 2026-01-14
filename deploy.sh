@@ -19,6 +19,7 @@ fi
 
 echo "Deploying to $REMOTE"
 scp "$WASM" "$REMOTE"
+cp -f "$WASM" ~/.config/zellij/plugins/
 
 echo "Done. Reload plugin in zellij with Alt+R or:"
 echo "  zellij action start-or-reload-plugin file:~/.config/zellij/plugins/zsm.wasm"

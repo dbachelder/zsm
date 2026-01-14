@@ -21,6 +21,7 @@ None
 - [x] **Phase 5: Responsive Deletion** - Immediate UI feedback when killing sessions
 - [x] **Phase 6: Help Text Layout** - Two-row help text with logical grouping
 - [x] **Phase 7: Fix Session Naming Bug** - Fix session naming bug
+- [x] **Phase 8: Resurrectable Session Improvements** - Improve resurrectable session handling and display
 
 ## Phase Details
 
@@ -88,10 +89,19 @@ Plans:
 Plans:
 - [x] 07-01: Add session rename with Ctrl+n keybinding
 
+### Phase 8: Resurrectable Session Improvements
+**Goal**: Improve resurrectable session handling and display
+**Depends on**: Phase 7
+**Research**: None (internal state and rendering changes)
+**Plans**: 1
+
+Plans:
+- [x] 08-01: Add Alt+D toggle for resurrectable sessions with pink coloring
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -102,3 +112,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 5. Responsive Deletion | 1/1 | Complete | 2026-01-13 |
 | 6. Help Text Layout | 1/1 | Complete | 2026-01-13 |
 | 7. Fix Session Naming Bug | 1/1 | Complete | 2026-01-13 |
+| 8. Resurrectable Session Improvements | 1/1 | Complete | 2026-01-14 |

@@ -27,8 +27,6 @@ pub struct Config {
     pub default_layout: Option<String>,
     /// Separator used in session names (default: ".")
     pub session_separator: String,
-    /// Whether you'd like resurrectable sessions to be shown in the session list
-    pub show_resurrectable_sessions: bool,
     /// Base paths to strip from directory names when generating session names
     pub base_paths: Vec<String>,
     /// Whether to show all sessions, not just those matching zoxide directories
@@ -42,7 +40,6 @@ impl Default for Config {
         Self {
             default_layout: None,
             session_separator: ".".to_string(),
-            show_resurrectable_sessions: false,
             base_paths: Vec::new(),
             show_all_sessions: false,
             sort_order: SortOrder::default(),
@@ -59,10 +56,6 @@ impl Config {
                 .get("session_separator")
                 .cloned()
                 .unwrap_or_else(|| ".".to_string()),
-            show_resurrectable_sessions: config
-                .get("show_resurrectable_sessions")
-                .map(|v| v == "true")
-                .unwrap_or(false),
             base_paths: config
                 .get("base_paths")
                 .map(|paths| {

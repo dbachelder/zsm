@@ -130,19 +130,6 @@ impl SessionManager {
             SessionAction::Switch(name) => {
                 switch_session(Some(&name));
             }
-            SessionAction::Kill(name) => {
-                if self
-                    .resurrectable_sessions
-                    .iter()
-                    .any(|(session_name, _)| session_name == &name)
-                {
-                    // If the session is resurrectable, we should delete it
-                    delete_dead_session(&name);
-                } else {
-                    // Otherwise, we need to kill the session
-                    kill_sessions(&[&name]);
-                }
-            }
         }
     }
 
@@ -197,13 +184,24 @@ impl SessionManager {
     /// Uses optimistic update - removes from local state immediately before sending kill command
     pub fn confirm_deletion(&mut self) {
         if let Some(session_name) = self.pending_deletion.take() {
+            // Check if it's a resurrectable session BEFORE the optimistic removal
+            // (removal clears the list, so we must check first)
+            let is_resurrectable = self
+                .resurrectable_sessions
+                .iter()
+                .any(|(name, _)| name == &session_name);
+
             // Optimistic update: Remove session from local state immediately
             // This provides instant UI feedback rather than waiting for MISSING_THRESHOLD updates
             self.remove_session_from_local_state(&session_name);
 
             // Now execute the actual kill/delete action
             // If this fails, the session will reappear on the next SessionUpdate event
-            self.execute_action(SessionAction::Kill(session_name));
+            if is_resurrectable {
+                delete_dead_session(&session_name);
+            } else {
+                kill_sessions(&[&session_name]);
+            }
         }
     }
 

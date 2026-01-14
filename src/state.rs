@@ -36,6 +36,8 @@ pub struct PluginState {
     selected_index: Option<usize>,
     /// Buffer for rename input
     rename_buffer: String,
+    /// Whether to show dead (resurrectable) sessions
+    show_dead_sessions: bool,
 }
 
 /// Represents the different screens in the plugin
@@ -154,14 +156,15 @@ impl PluginState {
 
     /// Combine sessions and zoxide directories for display
     fn combined_items(&self) -> Vec<SessionItem> {
-        let mut sessions: Vec<SessionItem> = Vec::new();
+        let mut existing_sessions: Vec<SessionItem> = Vec::new();
+        let mut resurrectable_sessions: Vec<SessionItem> = Vec::new();
         let mut directories: Vec<SessionItem> = Vec::new();
         let mut added_session_names = HashSet::new();
 
         // First, collect existing sessions that match zoxide directories (including incremented ones)
         for session in self.session_manager.sessions() {
             if let Some(zoxide_dir) = self.find_matching_zoxide_dir(&session.name) {
-                sessions.push(SessionItem::ExistingSession {
+                existing_sessions.push(SessionItem::ExistingSession {
                     name: session.name.clone(),
                     directory: zoxide_dir.directory.clone(),
                     is_current: session.is_current_session,
@@ -169,7 +172,7 @@ impl PluginState {
                 added_session_names.insert(session.name.clone());
             } else if self.config.show_all_sessions {
                 // Session didn't match any zoxide dir, but show_all_sessions is enabled
-                sessions.push(SessionItem::ExistingSession {
+                existing_sessions.push(SessionItem::ExistingSession {
                     name: session.name.clone(),
                     directory: String::new(),
                     is_current: session.is_current_session,
@@ -178,8 +181,8 @@ impl PluginState {
             }
         }
 
-        // Add resurrectable sessions if configured to show them
-        if self.config.show_resurrectable_sessions {
+        // Add resurrectable sessions if toggled on
+        if self.show_dead_sessions {
             for (name, duration) in self.session_manager.resurrectable_sessions() {
                 // Skip if already added as existing session
                 if added_session_names.contains(name) {
@@ -188,7 +191,7 @@ impl PluginState {
 
                 let matches_zoxide = self.find_matching_zoxide_dir(name).is_some();
                 if matches_zoxide || self.config.show_all_sessions {
-                    sessions.push(SessionItem::ResurrectableSession {
+                    resurrectable_sessions.push(SessionItem::ResurrectableSession {
                         name: name.clone(),
                         duration: *duration,
                     });
@@ -204,11 +207,11 @@ impl PluginState {
             });
         }
 
-        // Sort sessions based on config
+        // Sort existing sessions based on config
         match self.config.sort_order {
             SortOrder::Mru => {
                 // Sort by MRU timestamp (descending - most recent first)
-                sessions.sort_by(|a, b| {
+                existing_sessions.sort_by(|a, b| {
                     let ts_a = self.session_manager.get_mru_rank(a.name());
                     let ts_b = self.session_manager.get_mru_rank(b.name());
                     ts_b.cmp(&ts_a) // Descending order
@@ -216,12 +219,26 @@ impl PluginState {
             }
             SortOrder::Alphabetical => {
                 // Sort alphabetically by name (case-insensitive)
-                sessions.sort_by_key(|a| a.name().to_lowercase());
+                existing_sessions.sort_by_key(|a| a.name().to_lowercase());
             }
         }
 
-        // Combine: sorted sessions first, then directories (already sorted by zoxide score)
-        let mut items = sessions;
+        // Sort resurrectable sessions by age (most recently killed first = smallest duration)
+        resurrectable_sessions.sort_by(|a, b| {
+            let dur_a = match a {
+                SessionItem::ResurrectableSession { duration, .. } => *duration,
+                _ => std::time::Duration::MAX,
+            };
+            let dur_b = match b {
+                SessionItem::ResurrectableSession { duration, .. } => *duration,
+                _ => std::time::Duration::MAX,
+            };
+            dur_a.cmp(&dur_b) // Ascending order (smallest/most recent first)
+        });
+
+        // Combine: existing sessions, then resurrectable, then directories
+        let mut items = existing_sessions;
+        items.append(&mut resurrectable_sessions);
         items.append(&mut directories);
         items
     }
@@ -386,6 +403,11 @@ impl PluginState {
                 // Rename current session
                 self.rename_buffer = self.current_session_name.clone().unwrap_or_default();
                 self.active_screen = ActiveScreen::Rename;
+                true
+            }
+            BareKey::Char('d') if key.has_modifiers(&[KeyModifier::Alt]) => {
+                // Toggle dead (resurrectable) sessions visibility
+                self.show_dead_sessions = !self.show_dead_sessions;
                 true
             }
             _ => false,

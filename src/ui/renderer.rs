@@ -448,12 +448,12 @@ impl PluginRenderer {
                     width = name_col_width
                 );
 
-                // Color just the session name portion
+                // Color just the session name portion in pink (color index 3)
                 let name_end = 2 + name.len();
                 if let Some(theme) = theme {
-                    theme.content(&display_text).color_range(1, 2..name_end)
+                    theme.content(&display_text).color_range(3, 2..name_end)
                 } else {
-                    Text::new(&display_text).color_range(1, 2..name_end)
+                    Text::new(&display_text).color_range(3, 2..name_end)
                 }
             }
             SessionItem::Directory { path, .. } => {
@@ -483,7 +483,7 @@ impl PluginRenderer {
         } else {
             (
                 "↑/↓: Navigate • Type: Search • Enter: Switch/New • Esc: Exit",
-                "Ctrl+Enter: Quick • Alt+r: Rename • Ctrl+r: Reload • Del: Kill",
+                "Ctrl+Enter: Quick • Alt+r: Rename • Alt+d: Dead • Ctrl+r: Reload • Del: Kill",
             )
         };
 
