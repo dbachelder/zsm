@@ -20,7 +20,7 @@ None
 - [x] **Phase 4: Title Update** - Change title to "ZSM - Zellij Session Manager"
 - [x] **Phase 5: Responsive Deletion** - Immediate UI feedback when killing sessions
 - [x] **Phase 6: Help Text Layout** - Two-row help text with logical grouping
-- [ ] **Phase 7: Fix Session Naming Bug** - Fix session naming bug
+- [x] **Phase 7: Fix Session Naming Bug** - Fix session naming bug
 
 ## Phase Details
 
@@ -80,13 +80,13 @@ Plans:
 - [x] 06-01: Restructure help text rendering
 
 ### Phase 7: Fix Session Naming Bug
-**Goal**: Fix session naming bug
+**Goal**: Add session rename capability so users can rename sessions with unwanted `.2` suffix
 **Depends on**: Phase 6
-**Research**: TBD
-**Plans**: TBD
+**Research**: None (using existing zellij-tile `rename_session()` API)
+**Plans**: 1
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 7 to break down)
+- [x] 07-01: Add session rename with Ctrl+n keybinding
 
 ## Progress
 
@@ -101,4 +101,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Title Update | 1/1 | Complete | 2026-01-13 |
 | 5. Responsive Deletion | 1/1 | Complete | 2026-01-13 |
 | 6. Help Text Layout | 1/1 | Complete | 2026-01-13 |
-| 7. Fix Session Naming Bug | 0/? | Not started | - |
+| 7. Fix Session Naming Bug | 1/1 | Complete | 2026-01-13 |

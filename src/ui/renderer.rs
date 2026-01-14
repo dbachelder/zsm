@@ -21,6 +21,9 @@ impl PluginRenderer {
             ActiveScreen::NewSession => {
                 Self::render_new_session_screen(&*state, x, y, width, height);
             }
+            ActiveScreen::Rename => {
+                Self::render_rename_screen(&*state, x, y, width, height);
+            }
         }
 
         // Render overlays
@@ -96,6 +99,44 @@ impl PluginRenderer {
             x,
             y,
         );
+    }
+
+    /// Render session rename screen
+    fn render_rename_screen(
+        state: &PluginState,
+        x: usize,
+        y: usize,
+        _width: usize,
+        _height: usize,
+    ) {
+        let theme = state.colors().map(Theme::new);
+
+        // Render prompt
+        let prompt = "Rename session:";
+        let prompt_text = if let Some(theme) = &theme {
+            theme.content(prompt).color_range(2, ..)
+        } else {
+            Text::new(prompt).color_range(2, ..)
+        };
+        print_text_with_coordinates(prompt_text, x, y, None, None);
+
+        // Render current input with cursor
+        let input_display = format!("{}_", state.rename_buffer());
+        let input_text = if let Some(theme) = &theme {
+            theme.content(&input_display)
+        } else {
+            Text::new(&input_display)
+        };
+        print_text_with_coordinates(input_text, x, y + 2, None, None);
+
+        // Render help text
+        let help = "Enter: Confirm • Esc: Cancel";
+        let help_text = if let Some(theme) = &theme {
+            theme.content(help).color_range(1, ..)
+        } else {
+            Text::new(help).color_range(1, ..)
+        };
+        print_text_with_coordinates(help_text, x, y + 4, None, None);
     }
 
     /// Render search results table
@@ -436,13 +477,13 @@ impl PluginRenderer {
     fn render_help_text(state: &PluginState, x: usize, y: usize, theme: &Option<Theme>) {
         let (row1, row2) = if state.display_items().is_empty() {
             (
-                "Type session name",
-                "Enter: Create • Ctrl+Enter: Quick create • Esc: Exit",
+                "Type session name • Enter: Create • Esc: Exit",
+                "Ctrl+Enter: Quick create",
             )
         } else {
             (
-                "↑/↓: Navigate • Type: Search",
-                "Enter: Switch/New • Ctrl+Enter: Quick create • Ctrl+r: Reload • Delete: Kill • Esc: Exit",
+                "↑/↓: Navigate • Type: Search • Enter: Switch/New • Esc: Exit",
+                "Ctrl+Enter: Quick • Alt+r: Rename • Ctrl+r: Reload • Del: Kill",
             )
         };
 

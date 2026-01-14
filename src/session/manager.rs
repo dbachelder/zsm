@@ -151,6 +151,32 @@ impl SessionManager {
         self.pending_deletion = Some(session_name);
     }
 
+    /// Rename a session in local state (optimistic update)
+    /// Used for immediate UI feedback before Zellij confirms the rename
+    pub fn rename_session_in_local_state(&mut self, old_name: &str, new_name: &str) {
+        let old_key = old_name.to_lowercase();
+        let new_key = new_name.to_lowercase();
+
+        // Update in existing sessions
+        if let Some(session) = self
+            .sessions
+            .iter_mut()
+            .find(|s| s.name.to_lowercase() == old_key)
+        {
+            session.name = new_name.to_string();
+        }
+
+        // Update MRU timestamps (transfer old name's timestamp to new name)
+        if let Some(timestamp) = self.mru_timestamps.remove(old_name) {
+            self.mru_timestamps.insert(new_name.to_string(), timestamp);
+        }
+
+        // Clean up missing counts for old name
+        self.missing_counts.remove(&old_key);
+        // Pre-emptively remove new name from missing counts in case it was tracked
+        self.missing_counts.remove(&new_key);
+    }
+
     /// Remove a session from local state (optimistic update)
     /// Used by confirm_deletion for immediate UI feedback
     fn remove_session_from_local_state(&mut self, session_name: &str) {
@@ -449,5 +475,43 @@ mod tests {
         // Even if session somehow reappears (failed kill), the missing_counts
         // shouldn't have stale data - verify session is gone from local state
         assert_eq!(manager.sessions().len(), 0);
+    }
+
+    #[test]
+    fn test_optimistic_rename_updates_session_name() {
+        let mut manager = SessionManager::default();
+
+        // Add sessions
+        manager.update_sessions_stable(vec![
+            make_session("old-name", true),
+            make_session("other", false),
+        ]);
+        assert_eq!(manager.sessions().len(), 2);
+
+        // Optimistic rename should update session name immediately
+        manager.rename_session_in_local_state("old-name", "new-name");
+
+        // Session should have new name
+        assert_eq!(manager.sessions().len(), 2);
+        assert!(manager.sessions().iter().any(|s| s.name == "new-name"));
+        assert!(!manager.sessions().iter().any(|s| s.name == "old-name"));
+    }
+
+    #[test]
+    fn test_optimistic_rename_transfers_mru_timestamp() {
+        let mut manager = SessionManager::default();
+
+        // Add session and set MRU timestamp
+        manager.update_sessions_stable(vec![make_session("old-name", true)]);
+        manager.record_switch("old-name");
+        let old_ts = manager.get_mru_rank("old-name");
+        assert!(old_ts > 0);
+
+        // Optimistic rename should transfer MRU timestamp
+        manager.rename_session_in_local_state("old-name", "new-name");
+
+        // Timestamp should be on new name, not old
+        assert_eq!(manager.get_mru_rank("new-name"), old_ts);
+        assert_eq!(manager.get_mru_rank("old-name"), 0);
     }
 }

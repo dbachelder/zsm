@@ -34,6 +34,8 @@ pub struct PluginState {
     request_ids: Vec<String>,
     /// Selected index in main list (when not searching)
     selected_index: Option<usize>,
+    /// Buffer for rename input
+    rename_buffer: String,
 }
 
 /// Represents the different screens in the plugin
@@ -44,6 +46,8 @@ pub enum ActiveScreen {
     Main,
     /// New session creation screen
     NewSession,
+    /// Session rename screen
+    Rename,
 }
 
 impl PluginState {
@@ -125,6 +129,7 @@ impl PluginState {
         match self.active_screen {
             ActiveScreen::Main => self.handle_main_screen_key(key),
             ActiveScreen::NewSession => self.handle_new_session_key(key),
+            ActiveScreen::Rename => self.handle_rename_screen_key(key),
         }
     }
 
@@ -311,6 +316,11 @@ impl PluginState {
         &self.config
     }
 
+    /// Get rename buffer (for UI rendering)
+    pub fn rename_buffer(&self) -> &str {
+        &self.rename_buffer
+    }
+
     /// Get selected item
     pub fn selected_item(&self) -> Option<SessionItem> {
         if self.search_engine.is_searching() {
@@ -372,6 +382,12 @@ impl PluginState {
                 self.fetch_zoxide_directories();
                 true
             }
+            BareKey::Char('r') if key.has_modifiers(&[KeyModifier::Alt]) => {
+                // Rename current session
+                self.rename_buffer = self.current_session_name.clone().unwrap_or_default();
+                self.active_screen = ActiveScreen::Rename;
+                true
+            }
             _ => false,
         }
     }
@@ -428,6 +444,52 @@ impl PluginState {
                 self.new_session_info.handle_key(key);
                 true
             }
+        }
+    }
+
+    /// Handle rename screen key input
+    fn handle_rename_screen_key(&mut self, key: KeyWithModifier) -> bool {
+        match key.bare_key {
+            BareKey::Enter if key.has_no_modifiers() => {
+                // Validate and apply rename
+                let new_name = self.rename_buffer.trim();
+                if new_name.is_empty() {
+                    self.set_error("Session name cannot be empty".to_string());
+                } else if new_name.len() >= 108 {
+                    self.set_error("Session name must be shorter than 108 bytes".to_string());
+                } else if new_name.contains('/') {
+                    self.set_error("Session name cannot contain '/'".to_string());
+                } else {
+                    // Optimistic update: rename in local state immediately for instant UI feedback
+                    if let Some(ref old_name) = self.current_session_name {
+                        self.session_manager
+                            .rename_session_in_local_state(old_name, new_name);
+                    }
+                    // Call Zellij's rename_session API
+                    rename_session(new_name);
+                    self.current_session_name = Some(new_name.to_string());
+                    self.rename_buffer.clear();
+                    self.active_screen = ActiveScreen::Main;
+                }
+                true
+            }
+            BareKey::Esc if key.has_no_modifiers() => {
+                // Cancel rename
+                self.rename_buffer.clear();
+                self.active_screen = ActiveScreen::Main;
+                true
+            }
+            BareKey::Char(c) if key.has_no_modifiers() && c != '\n' => {
+                // Add character to buffer
+                self.rename_buffer.push(c);
+                true
+            }
+            BareKey::Backspace if key.has_no_modifiers() => {
+                // Remove last character
+                self.rename_buffer.pop();
+                true
+            }
+            _ => false,
         }
     }
 
