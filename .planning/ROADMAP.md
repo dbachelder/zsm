@@ -19,7 +19,7 @@ None
 - [x] **Phase 3: Tabular Alignment** - Session names and directories in clean columns
 - [x] **Phase 4: Title Update** - Change title to "ZSM - Zellij Session Manager"
 - [x] **Phase 5: Responsive Deletion** - Immediate UI feedback when killing sessions
-- [ ] **Phase 6: Help Text Layout** - Two-row help text with logical grouping
+- [x] **Phase 6: Help Text Layout** - Two-row help text with logical grouping
 - [ ] **Phase 7: Fix Session Naming Bug** - Fix session naming bug
 
 ## Phase Details
@@ -77,7 +77,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 06-01: Restructure help text rendering
+- [x] 06-01: Restructure help text rendering
 
 ### Phase 7: Fix Session Naming Bug
 **Goal**: Fix session naming bug
@@ -100,5 +100,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Tabular Alignment | 1/1 | Complete | 2026-01-13 |
 | 4. Title Update | 1/1 | Complete | 2026-01-13 |
 | 5. Responsive Deletion | 1/1 | Complete | 2026-01-13 |
-| 6. Help Text Layout | 0/1 | Not started | - |
+| 6. Help Text Layout | 1/1 | Complete | 2026-01-13 |
 | 7. Fix Session Naming Bug | 0/? | Not started | - |

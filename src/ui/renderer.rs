@@ -52,7 +52,8 @@ impl PluginRenderer {
         print_text_with_coordinates(search_indication, x, y, None, None);
 
         // Render main content
-        let table_rows = height.saturating_sub(4);
+        // Reserve 5 rows: 1 search bar + 1 empty + table + 2 help rows
+        let table_rows = height.saturating_sub(5);
         let table = if state.search_engine().is_searching() {
             Self::render_search_results(&*state, table_rows, width, &theme)
         } else {
@@ -71,8 +72,8 @@ impl PluginRenderer {
             print_table_with_coordinates(table, x, y + 2, Some(width), Some(table_rows));
         }
 
-        // Render help text
-        Self::render_help_text(state, x, y + height.saturating_sub(1), &theme);
+        // Render help text (2 rows starting at y + height - 2)
+        Self::render_help_text(state, x, y + height.saturating_sub(2), &theme);
     }
 
     /// Render new session creation screen
@@ -209,7 +210,9 @@ impl PluginRenderer {
         if !indices.is_empty() {
             // Indices are based on old format - need to adjust for new columnar format
             let adjusted_indices = match item {
-                SessionItem::ExistingSession { name, directory, .. } => {
+                SessionItem::ExistingSession {
+                    name, directory, ..
+                } => {
                     // Old format: "● name (directory)" or "○ name (directory)"
                     // New format: "● name    directory" (padded to name_col_width + 2 gap)
                     //
@@ -233,13 +236,15 @@ impl PluginRenderer {
                                 Some(idx)
                             } else if idx < prefix_len + name.len() {
                                 // Session name - check if truncated
-                                let name_display_len = (prefix_len + name.len()).min(name_col_width);
+                                let name_display_len =
+                                    (prefix_len + name.len()).min(name_col_width);
                                 if idx < name_display_len {
                                     Some(idx)
                                 } else {
                                     None // Truncated
                                 }
-                            } else if idx >= old_dir_start && idx < old_dir_start + directory.len() {
+                            } else if idx >= old_dir_start && idx < old_dir_start + directory.len()
+                            {
                                 // Directory part - remap to new position
                                 let dir_idx = idx - old_dir_start;
                                 let dir_col_max = max_width.saturating_sub(new_dir_start);
@@ -247,7 +252,8 @@ impl PluginRenderer {
                                 // Handle directory truncation
                                 if directory.len() > dir_col_max && dir_col_max > 10 {
                                     // Directory is truncated with "..." prefix
-                                    let truncated_start = directory.len().saturating_sub(dir_col_max - 3);
+                                    let truncated_start =
+                                        directory.len().saturating_sub(dir_col_max - 3);
                                     if dir_idx >= truncated_start {
                                         Some(new_dir_start + 3 + (dir_idx - truncated_start))
                                     } else {
@@ -286,7 +292,8 @@ impl PluginRenderer {
                                 Some(idx)
                             } else if idx < prefix_len + name.len() {
                                 // Session name - check truncation
-                                let name_display_len = (prefix_len + name.len()).min(name_col_width);
+                                let name_display_len =
+                                    (prefix_len + name.len()).min(name_col_width);
                                 if idx < name_display_len {
                                     Some(idx)
                                 } else {
@@ -372,7 +379,12 @@ impl PluginRenderer {
                 };
 
                 // Format with padding: name padded to column width, then directory
-                let display_text = format!("{:<width$}  {}", name_display, dir_display, width = name_col_width);
+                let display_text = format!(
+                    "{:<width$}  {}",
+                    name_display,
+                    dir_display,
+                    width = name_col_width
+                );
 
                 // Color session name only (after bullet)
                 // Emphasis colors: 0=orange, 1=cyan, 2=green, 3=pink (theme-dependent)
@@ -388,8 +400,12 @@ impl PluginRenderer {
                 let duration_str = format!("{} ago", humantime::format_duration(*duration));
 
                 // Format with padding (names are never truncated)
-                let display_text =
-                    format!("{:<width$}  {}", name_display, duration_str, width = name_col_width);
+                let display_text = format!(
+                    "{:<width$}  {}",
+                    name_display,
+                    duration_str,
+                    width = name_col_width
+                );
 
                 // Color just the session name portion
                 let name_end = 2 + name.len();
@@ -416,21 +432,35 @@ impl PluginRenderer {
         }
     }
 
-    /// Render help text
+    /// Render help text on two rows (row 1: navigation, row 2: actions)
     fn render_help_text(state: &PluginState, x: usize, y: usize, theme: &Option<Theme>) {
-        let help_text = if state.display_items().is_empty() {
-            "Type session name and press Enter • Ctrl+Enter: Quick create • Esc: Exit"
+        let (row1, row2) = if state.display_items().is_empty() {
+            (
+                "Type session name",
+                "Enter: Create • Ctrl+Enter: Quick create • Esc: Exit",
+            )
         } else {
-            "↑/↓: Navigate • Enter: Switch/New • Ctrl+Enter: Quick create • Ctrl+r: reload directories • Delete: Kill • Type: Search • Esc: Exit"
+            (
+                "↑/↓: Navigate • Type: Search",
+                "Enter: Switch/New • Ctrl+Enter: Quick create • Ctrl+r: Reload • Delete: Kill • Esc: Exit",
+            )
         };
 
-        let text = if let Some(theme) = theme {
-            theme.content(help_text).color_range(1, ..)
+        // Render row 1 (navigation)
+        let text1 = if let Some(theme) = theme {
+            theme.content(row1).color_range(1, ..)
         } else {
-            Text::new(help_text).color_range(1, ..)
+            Text::new(row1).color_range(1, ..)
         };
+        print_text_with_coordinates(text1, x, y, None, None);
 
-        print_text_with_coordinates(text, x, y, None, None);
+        // Render row 2 (actions)
+        let text2 = if let Some(theme) = theme {
+            theme.content(row2).color_range(1, ..)
+        } else {
+            Text::new(row2).color_range(1, ..)
+        };
+        print_text_with_coordinates(text2, x, y + 1, None, None);
     }
 
     /// Render error message
