@@ -116,6 +116,10 @@ impl PluginRenderer {
         let results = state.search_engine().results();
         let selected_index = state.search_engine().selected_index();
 
+        // Calculate name column width from search result items
+        let items: Vec<_> = results.iter().map(|r| r.item.clone()).collect();
+        let name_col_width = Self::calculate_name_column_width(&items);
+
         let (first_row, last_row) =
             Self::calculate_render_range(table_rows, results.len(), selected_index);
 
@@ -126,6 +130,7 @@ impl PluginRenderer {
                     &result.item,
                     &result.indices,
                     table_width.saturating_sub(4),
+                    name_col_width,
                     theme,
                 )];
 
@@ -151,6 +156,9 @@ impl PluginRenderer {
         let items = state.display_items();
         let selected_index = state.selected_index();
 
+        // Calculate column width once for all items
+        let name_col_width = Self::calculate_name_column_width(&items);
+
         let (first_row, last_row) =
             Self::calculate_render_range(table_rows, items.len(), selected_index);
 
@@ -160,6 +168,7 @@ impl PluginRenderer {
                 let mut table_cells = vec![Self::render_item(
                     item,
                     table_width.saturating_sub(4),
+                    name_col_width,
                     theme,
                 )];
 
@@ -174,30 +183,141 @@ impl PluginRenderer {
         table
     }
 
+    /// Calculate the width of the name column based on the longest session name
+    fn calculate_name_column_width(items: &[SessionItem]) -> usize {
+        let max_name_len = items
+            .iter()
+            .filter_map(|item| match item {
+                SessionItem::ExistingSession { name, .. } => Some(name.len() + 2), // "● " prefix
+                SessionItem::ResurrectableSession { name, .. } => Some(name.len() + 2), // "↺ " prefix
+                SessionItem::Directory { .. } => None, // Directories don't use columnar format
+            })
+            .max()
+            .unwrap_or(0);
+
+        // No cap - session names are never truncated
+        max_name_len
+    }
+
     /// Render a search result item
+    ///
+    /// Search indices are based on the OLD format (e.g., "● name (directory)") but we now
+    /// render in columnar format (e.g., "● name    directory"). This function adjusts
+    /// indices to account for the format change.
     fn render_search_result_item(
         item: &SessionItem,
         indices: &[usize],
         max_width: usize,
+        name_col_width: usize,
         theme: &Option<Theme>,
     ) -> Text {
-        let mut text = Self::render_item(item, max_width, theme);
+        let mut text = Self::render_item(item, max_width, name_col_width, theme);
 
         // Apply search highlighting
         if !indices.is_empty() {
-            // Now indices should match the display text exactly since search matches against display text
-            // But we need to handle truncation for directories
+            // Indices are based on old format - need to adjust for new columnar format
             let adjusted_indices = match item {
-                SessionItem::ExistingSession { .. } => {
-                    // Indices should match the display text exactly
-                    indices.to_vec()
+                SessionItem::ExistingSession { name, directory, .. } => {
+                    // Old format: "● name (directory)" or "○ name (directory)"
+                    // New format: "● name    directory" (padded to name_col_width + 2 gap)
+                    //
+                    // Index mapping:
+                    // - 0-1: bullet prefix (unchanged)
+                    // - 2 to 2+name.len(): session name (unchanged, but capped by column width)
+                    // - Old: name.len()+2 to name.len()+3 = " ("
+                    // - New: name.len()+2 to name_col_width+2 = padding spaces
+                    // - Old: dir starts at 2+name.len()+2 = 4+name.len()
+                    // - New: dir starts at name_col_width+2 (after padding)
+
+                    let prefix_len = 2; // "● " or "○ "
+                    let old_dir_start = prefix_len + name.len() + 2; // " ("
+                    let new_dir_start = name_col_width + 2; // after padding gap
+
+                    indices
+                        .iter()
+                        .filter_map(|&idx| {
+                            if idx < prefix_len {
+                                // Bullet prefix - unchanged
+                                Some(idx)
+                            } else if idx < prefix_len + name.len() {
+                                // Session name - check if truncated
+                                let name_display_len = (prefix_len + name.len()).min(name_col_width);
+                                if idx < name_display_len {
+                                    Some(idx)
+                                } else {
+                                    None // Truncated
+                                }
+                            } else if idx >= old_dir_start && idx < old_dir_start + directory.len() {
+                                // Directory part - remap to new position
+                                let dir_idx = idx - old_dir_start;
+                                let dir_col_max = max_width.saturating_sub(new_dir_start);
+
+                                // Handle directory truncation
+                                if directory.len() > dir_col_max && dir_col_max > 10 {
+                                    // Directory is truncated with "..." prefix
+                                    let truncated_start = directory.len().saturating_sub(dir_col_max - 3);
+                                    if dir_idx >= truncated_start {
+                                        Some(new_dir_start + 3 + (dir_idx - truncated_start))
+                                    } else {
+                                        None // Index in truncated part
+                                    }
+                                } else if dir_idx < directory.len() {
+                                    Some(new_dir_start + dir_idx)
+                                } else {
+                                    None
+                                }
+                            } else {
+                                // " " or ")" in old format - skip
+                                None
+                            }
+                        })
+                        .collect()
                 }
-                SessionItem::ResurrectableSession { .. } => {
-                    // Indices should match the display text exactly
-                    indices.to_vec()
+                SessionItem::ResurrectableSession { name, duration } => {
+                    // Old format: "↺ name (created X ago)"
+                    // New format: "↺ name    X ago"
+                    //
+                    // The duration part changed format, so indices after the name
+                    // may not match well. Only highlight name portion reliably.
+
+                    let prefix_len = 2; // "↺ "
+                    let old_dur_start = prefix_len + name.len() + 10; // " (created "
+                    let new_dur_start = name_col_width + 2;
+
+                    let duration_str = format!("{} ago", humantime::format_duration(*duration));
+
+                    indices
+                        .iter()
+                        .filter_map(|&idx| {
+                            if idx < prefix_len {
+                                // Prefix - unchanged
+                                Some(idx)
+                            } else if idx < prefix_len + name.len() {
+                                // Session name - check truncation
+                                let name_display_len = (prefix_len + name.len()).min(name_col_width);
+                                if idx < name_display_len {
+                                    Some(idx)
+                                } else {
+                                    None
+                                }
+                            } else if idx >= old_dur_start {
+                                // Duration portion - remap
+                                // Old had "created X ago", new has just "X ago"
+                                // The "created " is 8 chars, so subtract 8 from offset
+                                let old_offset = idx - old_dur_start;
+                                if old_offset < duration_str.len() {
+                                    Some(new_dur_start + old_offset)
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        })
+                        .collect()
                 }
                 SessionItem::Directory { path, .. } => {
-                    // Handle truncation for long paths
+                    // Directories don't use columnar format - handle truncation only
                     if path.len() > max_width && max_width > 10 {
                         // Path is truncated with "..."
                         let truncated_start = path.len().saturating_sub(max_width - 3);
@@ -229,8 +349,13 @@ impl PluginRenderer {
         text
     }
 
-    /// Render a session item
-    fn render_item(item: &SessionItem, max_width: usize, theme: &Option<Theme>) -> Text {
+    /// Render a session item with columnar alignment
+    fn render_item(
+        item: &SessionItem,
+        max_width: usize,
+        name_col_width: usize,
+        theme: &Option<Theme>,
+    ) -> Text {
         match item {
             SessionItem::ExistingSession {
                 name,
@@ -238,31 +363,52 @@ impl PluginRenderer {
                 is_current,
             } => {
                 let prefix = if *is_current { "● " } else { "○ " };
-                let display_text = format!("{}{} ({})", prefix, name, directory);
+                let name_display = format!("{}{}", prefix, name);
 
-                let truncated_text = Self::get_truncated_text(&display_text, max_width);
+                // Calculate remaining width for directory (after name column + 2 char gap)
+                let dir_col_start = name_col_width + 2;
+                let dir_max_width = max_width.saturating_sub(dir_col_start);
 
-                // Color session name only, leave bullet as default foreground
+                // Truncate directory from left if needed (names are never truncated)
+                let dir_display = if directory.len() > dir_max_width && dir_max_width > 10 {
+                    format!(
+                        "...{}",
+                        &directory[directory.len().saturating_sub(dir_max_width - 3)..]
+                    )
+                } else {
+                    directory.clone()
+                };
+
+                // Format with padding: name padded to column width, then directory
+                let display_text = format!("{:<width$}  {}", name_display, dir_display, width = name_col_width);
+
+                // Color session name only (after bullet)
                 // Emphasis colors: 0=orange, 1=cyan, 2=green, 3=pink (theme-dependent)
                 let color_idx = if *is_current { 2 } else { 1 };
-                Text::new(&truncated_text).color_range(color_idx, 2..) // Session name + directory (skip bullet)
+                let name_end = 2 + name.len();
+                Text::new(&display_text).color_range(color_idx, 2..name_end)
             }
             SessionItem::ResurrectableSession { name, duration } => {
-                let display_text = format!(
-                    "↺ {} (created {} ago)",
-                    name,
-                    humantime::format_duration(*duration)
-                );
+                let prefix = "↺ ";
+                let name_display = format!("{}{}", prefix, name);
 
-                let truncated_text = Self::get_truncated_text(&display_text, max_width);
+                // Format duration info for second column
+                let duration_str = format!("{} ago", humantime::format_duration(*duration));
 
+                // Format with padding (names are never truncated)
+                let display_text =
+                    format!("{:<width$}  {}", name_display, duration_str, width = name_col_width);
+
+                // Color just the session name portion
+                let name_end = 2 + name.len();
                 if let Some(theme) = theme {
-                    theme.available_session(&truncated_text)
+                    theme.content(&display_text).color_range(1, 2..name_end)
                 } else {
-                    Text::new(&truncated_text).color_range(4, ..)
+                    Text::new(&display_text).color_range(1, 2..name_end)
                 }
             }
             SessionItem::Directory { path, .. } => {
+                // Directories don't use columnar format - just display the path
                 let display_path = if path.len() > max_width && max_width > 10 {
                     format!("...{}", &path[path.len().saturating_sub(max_width - 3)..])
                 } else {
@@ -403,18 +549,6 @@ impl PluginRenderer {
             (first_row_index, last_row_index)
         } else {
             (0, items_len)
-        }
-    }
-
-    fn get_truncated_text(text: &str, max_width: usize) -> String {
-        if text.len() > max_width && max_width > 10 {
-            format!(
-                "{}...{}",
-                &text[..10],
-                &text[text.len().saturating_sub(max_width - 13)..]
-            )
-        } else {
-            text.to_string()
         }
     }
 }

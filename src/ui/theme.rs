@@ -32,6 +32,7 @@ impl Theme {
     }
 
     /// Text for available session (color index 3 = cyan - available)
+    #[allow(dead_code)]
     pub fn available_session(&self, text: &str) -> Text {
         Text::new(text).color_range(3, ..)
     }

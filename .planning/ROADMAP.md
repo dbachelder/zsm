@@ -16,7 +16,7 @@ None
 
 - [x] **Phase 1: Color Palette** - Replace harsh pink/magenta with muted colors for live sessions
 - [x] **Phase 2: MRU Ordering** - Sessions ordered by most recent switch with config option
-- [ ] **Phase 3: Tabular Alignment** - Session names and directories in clean columns
+- [x] **Phase 3: Tabular Alignment** - Session names and directories in clean columns
 - [ ] **Phase 4: Title Update** - Change title to "ZSM - Zellij Session Manager"
 - [ ] **Phase 5: Responsive Deletion** - Immediate UI feedback when killing sessions
 - [ ] **Phase 6: Help Text Layout** - Two-row help text with logical grouping
@@ -49,7 +49,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 03-01: Calculate column widths and render aligned layout
+- [x] 03-01: Implement columnar layout for session list
 
 ### Phase 4: Title Update
 **Goal**: Change plugin title from current to "ZSM - Zellij Session Manager"
@@ -87,7 +87,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Color Palette | 1/1 | Complete | 2026-01-14 |
 | 2. MRU Ordering | 2/2 | Complete | 2026-01-13 |
-| 3. Tabular Alignment | 0/1 | Not started | - |
+| 3. Tabular Alignment | 1/1 | Complete | 2026-01-13 |
 | 4. Title Update | 0/1 | Not started | - |
 | 5. Responsive Deletion | 0/1 | Not started | - |
 | 6. Help Text Layout | 0/1 | Not started | - |
