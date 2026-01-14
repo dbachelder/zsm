@@ -18,6 +18,8 @@ pub struct SessionManager {
     /// Tracks how many consecutive updates each session has been missing
     /// Key is lowercase session name for case-insensitive matching
     missing_counts: HashMap<String, u8>,
+    /// MRU timestamps for session ordering (session name -> unix timestamp in seconds)
+    mru_timestamps: HashMap<String, u64>,
 }
 
 impl SessionManager {
@@ -164,6 +166,38 @@ impl SessionManager {
     /// Get session pending deletion
     pub fn pending_deletion(&self) -> Option<&str> {
         self.pending_deletion.as_deref()
+    }
+
+    /// Record a session switch for MRU tracking
+    /// Returns the unix timestamp that was recorded
+    pub fn record_switch(&mut self, session_name: &str) -> u64 {
+        use std::time::SystemTime;
+
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+
+        self.mru_timestamps
+            .insert(session_name.to_string(), timestamp);
+        timestamp
+    }
+
+    /// Set MRU timestamps from persisted data
+    pub fn set_mru_timestamps(&mut self, timestamps: HashMap<String, u64>) {
+        self.mru_timestamps = timestamps;
+    }
+
+    /// Get MRU timestamps
+    #[allow(dead_code)] // API completeness - useful for debugging/future features
+    pub fn mru_timestamps(&self) -> &HashMap<String, u64> {
+        &self.mru_timestamps
+    }
+
+    /// Get MRU rank for a session (higher = more recent)
+    /// Returns 0 if session has no recorded timestamp
+    pub fn get_mru_rank(&self, session_name: &str) -> u64 {
+        self.mru_timestamps.get(session_name).copied().unwrap_or(0)
     }
 
     /// Generate incremented session name for a base name

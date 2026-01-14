@@ -91,6 +91,10 @@ impl ZellijPlugin for PluginState {
                         self.set_previous_session(Some(previous));
                     }
                     should_render = true;
+                } else if context.contains_key("zsm_read_mru") {
+                    let stdout_str = String::from_utf8_lossy(&stdout);
+                    self.set_mru_timestamps(&stdout_str);
+                    should_render = true;
                 }
             }
             _ => (),

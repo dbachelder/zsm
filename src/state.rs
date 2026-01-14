@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::time::Duration;
 use zellij_tile::prelude::*;
 
-use crate::config::Config;
+use crate::config::{Config, SortOrder};
 use crate::new_session_info::NewSessionInfo;
 use crate::session::{SessionAction, SessionItem, SessionManager};
 use crate::zoxide::{SearchEngine, ZoxideDirectory};
@@ -62,8 +62,9 @@ impl PluginState {
 
                 // Track session change for quick-switch
                 if self.current_session_name != new_current {
-                    // Request async read of previous session
+                    // Request async read of previous session and MRU timestamps
                     self.request_previous_session_read();
+                    self.request_mru_timestamps_read();
                     // Reset selection so it will be initialized to previous session
                     self.selected_index = None;
                 }
@@ -148,13 +149,14 @@ impl PluginState {
 
     /// Combine sessions and zoxide directories for display
     fn combined_items(&self) -> Vec<SessionItem> {
-        let mut items = Vec::new();
+        let mut sessions: Vec<SessionItem> = Vec::new();
+        let mut directories: Vec<SessionItem> = Vec::new();
         let mut added_session_names = HashSet::new();
 
-        // First, add existing sessions that match zoxide directories (including incremented ones)
+        // First, collect existing sessions that match zoxide directories (including incremented ones)
         for session in self.session_manager.sessions() {
             if let Some(zoxide_dir) = self.find_matching_zoxide_dir(&session.name) {
-                items.push(SessionItem::ExistingSession {
+                sessions.push(SessionItem::ExistingSession {
                     name: session.name.clone(),
                     directory: zoxide_dir.directory.clone(),
                     is_current: session.is_current_session,
@@ -162,7 +164,7 @@ impl PluginState {
                 added_session_names.insert(session.name.clone());
             } else if self.config.show_all_sessions {
                 // Session didn't match any zoxide dir, but show_all_sessions is enabled
-                items.push(SessionItem::ExistingSession {
+                sessions.push(SessionItem::ExistingSession {
                     name: session.name.clone(),
                     directory: String::new(),
                     is_current: session.is_current_session,
@@ -181,7 +183,7 @@ impl PluginState {
 
                 let matches_zoxide = self.find_matching_zoxide_dir(name).is_some();
                 if matches_zoxide || self.config.show_all_sessions {
-                    items.push(SessionItem::ResurrectableSession {
+                    sessions.push(SessionItem::ResurrectableSession {
                         name: name.clone(),
                         duration: *duration,
                     });
@@ -189,14 +191,33 @@ impl PluginState {
             }
         }
 
-        // Then add all zoxide directories (always show directories, even if sessions exist)
+        // Collect all zoxide directories (always show directories, even if sessions exist)
         for dir in &self.zoxide_directories {
-            items.push(SessionItem::Directory {
+            directories.push(SessionItem::Directory {
                 path: dir.directory.clone(),
                 session_name: dir.session_name.clone(),
             });
         }
 
+        // Sort sessions based on config
+        match self.config.sort_order {
+            SortOrder::Mru => {
+                // Sort by MRU timestamp (descending - most recent first)
+                sessions.sort_by(|a, b| {
+                    let ts_a = self.session_manager.get_mru_rank(a.name());
+                    let ts_b = self.session_manager.get_mru_rank(b.name());
+                    ts_b.cmp(&ts_a) // Descending order
+                });
+            }
+            SortOrder::Alphabetical => {
+                // Sort alphabetically by name (case-insensitive)
+                sessions.sort_by_key(|a| a.name().to_lowercase());
+            }
+        }
+
+        // Combine: sorted sessions first, then directories (already sorted by zoxide score)
+        let mut items = sessions;
+        items.append(&mut directories);
         items
     }
 
@@ -486,9 +507,12 @@ impl PluginState {
                 if let Some(ref current) = self.current_session_name {
                     Self::write_previous_session(current);
                 }
+                // Record MRU timestamp for the target session
+                let timestamp = self.session_manager.record_switch(&name);
+                Self::write_mru_timestamp(&name, timestamp);
                 // Switch to existing session
                 self.session_manager
-                    .execute_action(SessionAction::Switch(name));
+                    .execute_action(SessionAction::Switch(name.clone()));
                 hide_self();
             } else {
                 // Create new session with incremented name
@@ -705,5 +729,65 @@ impl PluginState {
     pub fn set_previous_session(&mut self, name: Option<String>) {
         self.previous_session_name = name;
         self.selected_index = None;
+    }
+
+    /// Write MRU timestamp for a session via shell command
+    fn write_mru_timestamp(session_name: &str, timestamp: u64) {
+        use zellij_tile::prelude::run_command;
+        let mut context = BTreeMap::new();
+        context.insert("zsm_internal".to_string(), "mru_write".to_string());
+        run_command(
+            &[
+                "sh",
+                "-c",
+                &format!(
+                    "echo '{}:{}' >> /tmp/zsm-mru-timestamps",
+                    session_name, timestamp
+                ),
+            ],
+            context,
+        );
+    }
+
+    /// Request async read of MRU timestamps
+    pub fn request_mru_timestamps_read(&self) {
+        use zellij_tile::prelude::run_command;
+        let mut context = BTreeMap::new();
+        context.insert("zsm_read_mru".to_string(), "true".to_string());
+        run_command(
+            &[
+                "sh",
+                "-c",
+                "cat /tmp/zsm-mru-timestamps 2>/dev/null || echo ''",
+            ],
+            context,
+        );
+    }
+
+    /// Parse MRU timestamps from file data and update session manager
+    pub fn set_mru_timestamps(&mut self, data: &str) {
+        use std::collections::HashMap;
+
+        let mut timestamps: HashMap<String, u64> = HashMap::new();
+
+        // Parse lines of format "session_name:timestamp"
+        // Later lines override earlier ones (most recent write wins)
+        for line in data.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+
+            // Split on last colon to handle session names with colons
+            if let Some(colon_pos) = line.rfind(':') {
+                let name = &line[..colon_pos];
+                let ts_str = &line[colon_pos + 1..];
+                if let Ok(ts) = ts_str.parse::<u64>() {
+                    timestamps.insert(name.to_string(), ts);
+                }
+            }
+        }
+
+        self.session_manager.set_mru_timestamps(timestamps);
     }
 }

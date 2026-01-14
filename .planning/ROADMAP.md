@@ -14,8 +14,8 @@ None
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Color Palette** - Replace harsh pink/magenta with muted colors for live sessions
-- [ ] **Phase 2: MRU Ordering** - Sessions ordered by most recent switch with config option
+- [x] **Phase 1: Color Palette** - Replace harsh pink/magenta with muted colors for live sessions
+- [x] **Phase 2: MRU Ordering** - Sessions ordered by most recent switch with config option
 - [ ] **Phase 3: Tabular Alignment** - Session names and directories in clean columns
 - [ ] **Phase 4: Title Update** - Change title to "ZSM - Zellij Session Manager"
 - [ ] **Phase 5: Responsive Deletion** - Immediate UI feedback when killing sessions
@@ -30,7 +30,7 @@ None
 **Plans**: TBD
 
 Plans:
-- [ ] 01-01: Update theme colors for live session indicators
+- [x] 01-01: Update theme colors for live session indicators
 
 ### Phase 2: MRU Ordering
 **Goal**: Sort sessions by most recent switch rather than alphabetically, with a config option to choose sort order
@@ -39,8 +39,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 02-01: Add sort_order config option
-- [ ] 02-02: Implement MRU tracking and ordering
+- [x] 02-01: Add sort_order config option
+- [x] 02-02: Implement MRU tracking and ordering
 
 ### Phase 3: Tabular Alignment
 **Goal**: Align session names and directory paths in clean columns for improved readability
@@ -85,8 +85,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Color Palette | 0/1 | Not started | - |
-| 2. MRU Ordering | 0/2 | Not started | - |
+| 1. Color Palette | 1/1 | Complete | 2026-01-14 |
+| 2. MRU Ordering | 2/2 | Complete | 2026-01-13 |
 | 3. Tabular Alignment | 0/1 | Not started | - |
 | 4. Title Update | 0/1 | Not started | - |
 | 5. Responsive Deletion | 0/1 | Not started | - |
