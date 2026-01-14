@@ -65,11 +65,27 @@ watchexec --exts rs -- 'cargo build --target wasm32-wasip1; zellij action start-
 
 - **`components.rs`** - UI color utilities.
 
-- **`theme.rs`** - Theme/palette handling.
+- **`theme.rs`** - Theme/palette handling. See "Color System" below.
 
 ### Other
 
 - **`new_session_info.rs`** - State for new session creation screen (name input, folder selection, layout selection).
+
+## Color System
+
+Zellij plugins use `Text::color_range(index, range)` where `index` (0-3) maps to the user's theme **emphasis colors**:
+
+| Index | Color (default theme) | Usage in ZSM |
+|-------|----------------------|--------------|
+| 0 | Orange | Warnings, errors |
+| 1 | Cyan | Available sessions |
+| 2 | Green | Current/active session |
+| 3 | Pink/Magenta | Highlights |
+
+**Limitations:**
+- Only 4 colors available (emphasis_0 through emphasis_3)
+- No "dim" or opacity options — use default foreground for muted text
+- Actual colors depend on user's Zellij theme
 
 ## Key Concepts
 

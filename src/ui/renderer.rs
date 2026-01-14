@@ -242,21 +242,10 @@ impl PluginRenderer {
 
                 let truncated_text = Self::get_truncated_text(&display_text, max_width);
 
-                if let Some(theme) = theme {
-                    if *is_current {
-                        theme.current_session(&truncated_text)
-                    } else {
-                        theme.available_session(&truncated_text)
-                    }
-                } else {
-                    let mut text = Text::new(&truncated_text);
-                    if *is_current {
-                        text = text.color_range(2, ..);
-                    } else {
-                        text = text.color_range(3, ..);
-                    }
-                    text
-                }
+                // Color session name only, leave bullet as default foreground
+                // Emphasis colors: 0=orange, 1=cyan, 2=green, 3=pink (theme-dependent)
+                let color_idx = if *is_current { 2 } else { 1 };
+                Text::new(&truncated_text).color_range(color_idx, 2..) // Session name + directory (skip bullet)
             }
             SessionItem::ResurrectableSession { name, duration } => {
                 let display_text = format!(
