@@ -43,9 +43,9 @@ watchexec --exts rs -- 'cargo build --target wasm32-wasip1; zellij action start-
 
 - **`main.rs`** - Plugin entry point. Implements `ZellijPlugin` trait, handles Zellij events (key input, permissions, session updates), and processes zoxide output. Contains smart session naming logic.
 
-- **`state.rs`** - `PluginState` struct holds all plugin state: config, session manager, zoxide directories, search engine, and UI state. Orchestrates key handling between screens (Main vs NewSession).
+- **`state.rs`** - `PluginState` struct holds all plugin state: config, session manager, zoxide directories, search engine, and UI state. Orchestrates key handling between screens (Main, NewSession, Rename).
 
-- **`config.rs`** - Plugin configuration parsed from Zellij layout options (default_layout, session_separator, show_resurrectable_sessions, show_all_sessions, base_paths).
+- **`config.rs`** - Plugin configuration parsed from Zellij layout options (default_layout, session_separator, show_resurrectable_sessions, show_all_sessions, base_paths, sort_order).
 
 ### Session Module (`session/`)
 
@@ -91,11 +91,35 @@ Zellij plugins use `Text::color_range(index, range)` where `index` (0-3) maps to
 
 **Smart Session Naming**: The plugin generates session names from directory paths, handling conflicts (adds parent context), nested directories, and truncation (max 29 chars due to Unix socket path limits).
 
-**Two-Screen UI**: Main screen shows directory list with fuzzy search; NewSession screen handles session name/folder/layout configuration.
+**Three-Screen UI**: Main screen shows directory list with fuzzy search; NewSession screen handles session name/folder/layout configuration; Rename screen allows renaming the current session.
 
 **Filepicker Integration**: Communicates with Zellij's filepicker plugin via `pipe_message_to_plugin` for folder selection.
 
 **Session Stability**: Zellij sends inconsistent `SessionUpdate` events that can omit sessions temporarily. The `SessionManager` uses stability tracking with a missing-count threshold (3 updates) before removing sessions from the UI, preventing flickering.
+
+**MRU Ordering**: Sessions sorted by most recent switch. Timestamps persisted to `/tmp/zsm-mru-timestamps` via `run_command`. Configurable via `sort_order` option (`mru` or `alphabetical`).
+
+**Optimistic UI Updates**: Delete and rename operations update local state immediately before sending commands to Zellij, providing instant feedback. If the operation fails, the session reappears on the next `SessionUpdate`.
+
+## Keybindings
+
+**Main Screen:**
+| Key | Action |
+|-----|--------|
+| `↑/↓` | Navigate list |
+| `Enter` | Switch to session / Create new |
+| `Ctrl+Enter` | Quick create with default layout |
+| `Alt+r` | Rename current session |
+| `Ctrl+r` | Reload zoxide directories |
+| `Del` | Delete selected session |
+| `Esc` | Exit (or clear search) |
+| Type | Fuzzy search |
+
+**Rename Screen:**
+| Key | Action |
+|-----|--------|
+| `Enter` | Confirm rename |
+| `Esc` | Cancel |
 
 ## Testing
 
