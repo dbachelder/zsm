@@ -473,34 +473,42 @@ impl PluginRenderer {
         }
     }
 
-    /// Render help text on two rows (row 1: navigation, row 2: actions)
-    fn render_help_text(state: &PluginState, x: usize, y: usize, theme: &Option<Theme>) {
-        let (row1, row2) = if state.display_items().is_empty() {
-            (
-                "Type session name • Enter: Create • Esc: Exit",
-                "Ctrl+Enter: Quick create",
-            )
-        } else {
-            (
-                "↑/↓: Navigate • Type: Search • Enter: Switch/New • Esc: Exit",
-                "Ctrl+Enter: Quick • Alt+r: Rename • Alt+d: Dead • Ctrl+r: Reload • Del: Kill",
-            )
-        };
+    /// Apply color_range(3) to each key in the text, leaving labels in default color
+    fn style_help_text(text: &str, keys: &[&str]) -> Text {
+        let mut result = Text::new(text);
+        for key in keys {
+            if let Some(start) = text.find(key) {
+                result = result.color_range(3, start..start + key.len());
+            }
+        }
+        result
+    }
 
-        // Render row 1 (navigation)
-        let text1 = if let Some(theme) = theme {
-            theme.content(row1).color_range(1, ..)
-        } else {
-            Text::new(row1).color_range(1, ..)
-        };
+    /// Render help text on two rows (row 1: navigation, row 2: actions)
+    fn render_help_text(state: &PluginState, x: usize, y: usize, _theme: &Option<Theme>) {
+        let (row1, row2, keys1, keys2): (&str, &str, &[&str], &[&str]) =
+            if state.display_items().is_empty() {
+                (
+                    "Type session name • Enter: Create • Esc: Exit",
+                    "Ctrl+Enter: Quick create",
+                    &["Type", "Enter", "Esc"],
+                    &["Ctrl+Enter"],
+                )
+            } else {
+                (
+                    "↑/↓: Navigate • Type: Search • Enter: Switch/New • Esc: Exit",
+                    "Ctrl+Enter: Quick • Alt+r: Rename • Alt+d: Dead • Ctrl+r: Reload • Del: Kill",
+                    &["↑/↓", "Type", "Enter", "Esc"],
+                    &["Ctrl+Enter", "Alt+r", "Alt+d", "Ctrl+r", "Del"],
+                )
+            };
+
+        // Render row 1 (navigation) - keys in pink/magenta, labels in default
+        let text1 = Self::style_help_text(row1, keys1);
         print_text_with_coordinates(text1, x, y, None, None);
 
-        // Render row 2 (actions)
-        let text2 = if let Some(theme) = theme {
-            theme.content(row2).color_range(1, ..)
-        } else {
-            Text::new(row2).color_range(1, ..)
-        };
+        // Render row 2 (actions) - keys in pink/magenta, labels in default
+        let text2 = Self::style_help_text(row2, keys2);
         print_text_with_coordinates(text2, x, y + 1, None, None);
     }
 
