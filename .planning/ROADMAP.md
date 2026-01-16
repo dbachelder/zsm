@@ -22,6 +22,7 @@ None
 - [x] **Phase 6: Help Text Layout** - Two-row help text with logical grouping
 - [x] **Phase 7: Fix Session Naming Bug** - Fix session naming bug
 - [x] **Phase 8: Resurrectable Session Improvements** - Improve resurrectable session handling and display
+- [x] **Phase 9: Fix Session Name Editing** - Fix session name editing during session creation
 
 ## Phase Details
 
@@ -98,10 +99,19 @@ Plans:
 Plans:
 - [x] 08-01: Add Alt+D toggle for resurrectable sessions with pink coloring
 
+### Phase 9: Fix Session Name Editing
+**Goal**: Fix session name editing during session creation so users can modify the auto-generated name
+**Depends on**: Phase 8
+**Research**: Complete (Enter from name entry returns to Main instead of showing layout selection)
+**Plans**: 1
+
+Plans:
+- [x] 09-01: Fix NewSession Enter key after name editing
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -113,3 +123,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 6. Help Text Layout | 1/1 | Complete | 2026-01-13 |
 | 7. Fix Session Naming Bug | 1/1 | Complete | 2026-01-13 |
 | 8. Resurrectable Session Improvements | 1/1 | Complete | 2026-01-14 |
+| 9. Fix Session Name Editing | 1/1 | Complete | 2026-01-15 |

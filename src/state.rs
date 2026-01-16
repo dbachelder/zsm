@@ -418,10 +418,14 @@ impl PluginState {
     fn handle_new_session_key(&mut self, key: KeyWithModifier) -> bool {
         match key.bare_key {
             BareKey::Enter if key.has_no_modifiers() => {
-                // Handle session creation
+                // Only return to Main if we were in layout selection (session created)
+                // If in name entry, handle_selection just advances to layout selection
+                let was_in_layout_selection = self.new_session_info.entering_layout_search_term();
                 self.new_session_info
                     .handle_selection(&self.current_session_name);
-                self.active_screen = ActiveScreen::Main;
+                if was_in_layout_selection {
+                    self.active_screen = ActiveScreen::Main;
+                }
                 true
             }
             BareKey::Enter if key.has_modifiers(&[KeyModifier::Ctrl]) => {
