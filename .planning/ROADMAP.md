@@ -23,6 +23,7 @@ None
 - [x] **Phase 7: Fix Session Naming Bug** - Fix session naming bug
 - [x] **Phase 8: Resurrectable Session Improvements** - Improve resurrectable session handling and display
 - [x] **Phase 9: Fix Session Name Editing** - Fix session name editing during session creation
+- [ ] **Phase 10: Help Text Phase 2** - Second iteration of help text improvements
 
 ## Phase Details
 
@@ -108,10 +109,19 @@ Plans:
 Plans:
 - [x] 09-01: Fix NewSession Enter key after name editing
 
+### Phase 10: Help Text Phase 2
+**Goal**: Two-color help text styling where keys are pink/magenta and labels are default foreground
+**Depends on**: Phase 9
+**Research**: None (internal UI styling)
+**Plans**: 1
+
+Plans:
+- [ ] 10-01: Two-color help text styling
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -124,3 +134,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Fix Session Naming Bug | 1/1 | Complete | 2026-01-13 |
 | 8. Resurrectable Session Improvements | 1/1 | Complete | 2026-01-14 |
 | 9. Fix Session Name Editing | 1/1 | Complete | 2026-01-15 |
+| 10. Help Text Phase 2 | 0/1 | Planned | — |
