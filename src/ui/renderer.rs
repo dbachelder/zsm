@@ -489,17 +489,17 @@ impl PluginRenderer {
         let (row1, row2, keys1, keys2): (&str, &str, &[&str], &[&str]) =
             if state.display_items().is_empty() {
                 (
-                    "Type session name • Enter: Create • Esc: Exit",
-                    "Ctrl+Enter: Quick create",
-                    &["Type", "Enter", "Esc"],
-                    &["Ctrl+Enter"],
+                    "Type session name • <Enter> Create • <Esc> Exit",
+                    "<Ctrl+Enter> Quick create",
+                    &["Type", "<Enter>", "<Esc>"],
+                    &["<Ctrl+Enter>"],
                 )
             } else {
                 (
-                    "↑/↓: Navigate • Type: Search • Enter: Switch/New • Esc: Exit",
-                    "Ctrl+Enter: Quick • Alt+r: Rename • Alt+d: Dead • Ctrl+r: Reload • Del: Kill",
-                    &["↑/↓", "Type", "Enter", "Esc"],
-                    &["Ctrl+Enter", "Alt+r", "Alt+d", "Ctrl+r", "Del"],
+                    "<↑↓> Navigate • <Type> Search • <Enter> Switch/New • <Esc> Exit",
+                    "<Ctrl+Enter> Quick • <Alt+r> Rename • <Alt+d> Dead • <Ctrl+r> Reload • <Del> Kill",
+                    &["<↑↓>", "<Type>", "<Enter>", "<Esc>"],
+                    &["<Ctrl+Enter>", "<Alt+r>", "<Alt+d>", "<Ctrl+r>", "<Del>"],
                 )
             };
 
