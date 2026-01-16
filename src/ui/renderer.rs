@@ -473,12 +473,15 @@ impl PluginRenderer {
         }
     }
 
-    /// Apply color_range(3) to each key in the text, leaving labels in default color
-    fn style_help_text(text: &str, keys: &[&str]) -> Text {
+    /// Apply color to keys in help text using character indices (not byte indices)
+    fn color_keys(text: &str, keys: &[&str], color_idx: usize) -> Text {
         let mut result = Text::new(text);
         for key in keys {
-            if let Some(start) = text.find(key) {
-                result = result.color_range(3, start..start + key.len());
+            if let Some(byte_start) = text.find(key) {
+                // Convert byte position to character position
+                let char_start = text[..byte_start].chars().count();
+                let char_len = key.chars().count();
+                result = result.color_range(color_idx, char_start..char_start + char_len);
             }
         }
         result
@@ -486,29 +489,25 @@ impl PluginRenderer {
 
     /// Render help text on two rows (row 1: navigation, row 2: actions)
     fn render_help_text(state: &PluginState, x: usize, y: usize, _theme: &Option<Theme>) {
-        let (row1, row2, keys1, keys2): (&str, &str, &[&str], &[&str]) =
-            if state.display_items().is_empty() {
-                (
-                    "Type session name • <Enter> Create • <Esc> Exit",
-                    "<Ctrl+Enter> Quick create",
-                    &["Type", "<Enter>", "<Esc>"],
-                    &["<Ctrl+Enter>"],
-                )
-            } else {
-                (
-                    "<↑↓> Navigate • <Type> Search • <Enter> Switch/New • <Esc> Exit",
-                    "<Ctrl+Enter> Quick • <Alt+r> Rename • <Alt+d> Dead • <Ctrl+r> Reload • <Del> Kill",
-                    &["<↑↓>", "<Type>", "<Enter>", "<Esc>"],
-                    &["<Ctrl+Enter>", "<Alt+r>", "<Alt+d>", "<Ctrl+r>", "<Del>"],
-                )
-            };
+        let (row1, row2, keys1, keys2) = if state.display_items().is_empty() {
+            (
+                "<Enter> Create, <Esc> Exit",
+                "<Ctrl+Enter> Quick create",
+                vec!["<Enter>", "<Esc>"],
+                vec!["<Ctrl+Enter>"],
+            )
+        } else {
+            (
+                "<↑↓> Navigate, <Enter> Switch/New, <Esc> Exit",
+                "<Ctrl+Enter> Quick, <Alt+r> Rename, <Alt+d> Dead, <Ctrl+r> Reload, <Del> Kill",
+                vec!["<↑↓>", "<Enter>", "<Esc>"],
+                vec!["<Ctrl+Enter>", "<Alt+r>", "<Alt+d>", "<Ctrl+r>", "<Del>"],
+            )
+        };
 
-        // Render row 1 (navigation) - keys in pink/magenta, labels in default
-        let text1 = Self::style_help_text(row1, keys1);
+        let text1 = Self::color_keys(row1, &keys1, 0);
+        let text2 = Self::color_keys(row2, &keys2, 0);
         print_text_with_coordinates(text1, x, y, None, None);
-
-        // Render row 2 (actions) - keys in pink/magenta, labels in default
-        let text2 = Self::style_help_text(row2, keys2);
         print_text_with_coordinates(text2, x, y + 1, None, None);
     }
 
